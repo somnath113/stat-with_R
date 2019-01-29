@@ -1,0 +1,108 @@
+---
+title: "EXST 7014: Lab1 Assignment"
+author: "Somnath Mukherjee"
+date: "January 22, 2019"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###  Install and load required packages
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+ipak <- function(pkg){
+    new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+    if (length(new.pkg)) 
+        install.packages(new.pkg, dependencies = TRUE)
+    sapply(pkg, require, character.only = TRUE)
+}
+
+# usage
+packages <- c("knitr", "kableExtra", "ggplot2","plotly")
+ipak(packages)
+
+```
+
+
+###  Read the input file before answering questions
+
+```{r}
+fw07p06 = read.table("data_lab1.txt", header = FALSE, sep = "", dec = ".")
+colnames(fw07p06)=c("CITY","STATE","LAT","RANGE")
+```
+
+
+
+### 1. Produce a scatter plot to show the relationship between RANGE and LAT. What is your observation?
+
+```{r}
+ggplot(data = fw07p06,aes(x = LAT,y = RANGE))+
+  geom_point()+
+  theme_classic()
+
+```
+
+
+There seems to be a positive correlation between LAT (explanatory) and RANGE (dependent) variables.The relationship looks weak with some scatters. 
+We can also observe a few potential outliers.  
+
+###   2. Use lm to fit the linear model: y = b0 + b1x + e. Explain briefly your findings,which should include the parameter estimates, the interpretation of the parameters and appropriate hypothesis test.
+
+
+```{r}
+## Fitting the model
+model1 <- lm(RANGE ~ LAT, data=fw07p06)
+summary(model1)
+```
+
+
+Based on the R output above the regression coefficients are intercept(b0) = -6.47 and slope(b1) = 0.7515,which implies for 1 unit increase in LAT there will be 0.7515 increase for RANGE, and when LAT is zero RANGE will have a value of -6.47.    
+
+
+Hypotheses test: (We are assuming a significance level of 0.05)   
+Null: b1 = 0   
+Alternate: b1 != 0   
+In other words we assume slope b1 in the below formula is zero.    
+                   RANGE(predicted) = b0 + b1*LAT  
+Which essentially means LAT deos not help to predict RANGE in our model.              
+As we get a very small P-value(4.79e-06) < 0.05 from our test statistics, we will reject our null hypothese.  
+Hence we can probably say LAT is a good predictor of RANGE and our model might be a good fit. How good? - that is yet to be investigated.      
+
+###   3. Write the estimated regression function.
+
+
+```{r}
+model1$coefficients
+
+```
+
+Hence our model becomes:  
+RANGE(predicted) = -6.47 + 0.7515*LAT.  
+The regreession model plotted with ggplot2. 
+
+```{r}
+ggplot(data = fw07p06,aes(x = LAT,y = RANGE))+
+  geom_point()+
+  geom_smooth(method=lm)+
+  theme_classic()
+```
+
+
+
+###   4. Find the confidence interval for the intercept and the slope coefficients.  
+
+```{r}
+confint(model1) #with default 5% significance level.
+```
+
+
+### 5. What proportion of the variability in the dependent variable RANGE is accounted for by LAT through the regression line ?  
+
+```{r}
+summary(model1)$r.squared 
+```
+
+The explanatory variable LAT explains approximately 38.85% of the variability for the dependent RANGE variable, through the regression line.
