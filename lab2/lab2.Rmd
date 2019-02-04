@@ -1,0 +1,143 @@
+---
+title: "lab2 Classwork"
+author: "Somnath Mukherjee"
+date: "January 29, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+You might notice that a single observation that is substantially different from all other
+observations can make a large difference in the results of your regression analysis. If a
+single observation (or small group of observations) substantially changes your results, you
+would want to know about this and investigate further. In this lab exercise, we will conduct
+appropriate regression diagnostics to detect outliers (or unsual observations) as well as
+evaluate some model assumptions.  
+
+In this lab exercise, you will get familiar with and understand as listed:  
+1. Conduct appropriate regression diagnostics to detect outliers (or unusual observations)  
+2. Evaluate the assumptions of SLR using Residual Plots and the Normality Test.  
+
+###  Lab set-up 
+
+```{r,warning=FALSE,message=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(ggplot2)
+```
+
+
+```{r}
+#read input file
+theData = read.table(here('lab2','data','data2.txt'), header = F, stringsAsFactors = T) #use here() function to specify path
+colnames(theData)=c("CITY","STATE","LAT","RANGE")
+```
+
+The latitude (LAT) and the mean monthly range (RANGE), which is the difference between
+mean monthly maximum and minimum temperatures, are given for a selected set of US
+cities. The following program performs a SLR using RANGE as the dependent variable and
+LAT as the independent variable.  
+
+```{r}
+ggplot(data = theData,aes(x = LAT,y = RANGE))+
+  geom_point()+
+  ggtitle('Scatterplot of Temperature versus Latitude') +
+  theme_classic()
+
+```
+
+###  Fitting the SLR model
+
+Based on the scatterplot produced above, we assume that an appriopriate regression model
+relating RANGE and LAT is the linear model given by  
+  Y = b0 + b1X + e  
+where Y is the RANGE, X is the LAT, and e is a random error term that is normally distributed with the mean 0 and the unknown variance.  
+b0 is the estimate of the Y-intercept and  b1 is the estimate of the slope coeffient.  
+
+  
+```{r}
+#fit the model
+SLR_model <‐ lm(RANGE ~ LAT, data = theData)
+summary(SLR_model)
+
+```
+
+### Observation Diagonistics[Regression outlier, Leverage obs.,influential obs.]  
+**Regression outlier:** We use rstudent(Deleted Studentized residual) measure to check for regression outlier.  
+For our dataset if the value is >2 or <-2 then the point is an outlier.
+
+```{r}
+## R Student - used to check the regression outlier.
+rStudent <‐ rstudent(SLR_model)
+rStudent
+```
+
+
+```{r}
+outlierTest(SLR_model) # run test to get possible outliers considering p-value using adjusted alpha level.(part of car package)
+
+```
+
+**Leverage observation:** Unusally large X value than mean X.  
+
+```{r}
+## Hat diagonal values - to identify leverage outlier(unusual X value)
+HatDiag <‐ lm.influence(SLR_model)$hat # get Hat Diag values
+cutoff <‐ 2*(length(coef(SLR_model))/length(HatDiag)) # cu‐off at 2*p/n
+a <‐ theData[which(lm.influence(SLR_model)$hat > cutoff),] # Print obs with HAT > 2*p/n
+cbind(a, HatDiag[HatDiag > cutoff]) #obs with high hatdiag value
+plot(HatDiag, ylab="HatDiag")
+```
+
+**Influential observation** (based on DFFITS,DFBETAS,COOKSD):  
+Astericks beside obs. denotes influential obs.
+
+```{r}
+# Get ALL INFLUENCE MEASURES DISCUSSED (DFFITS,DFBETAS,COOKSD)
+influence.measures(SLR_model)
+```
+
+```{r}
+## To get individual outliers(influential obs.) run the codes below.
+## based on DFFITS
+DFFITS_model <‐ abs(dffits(SLR_model)) # get absolute values of DFFITS
+b <‐ theData[which(DFFITS_model > 1),] # get DFFITS > 1
+cbind(b, DFFITS = DFFITS_model[DFFITS_model > 1]) # Print obs with DFFITS >1
+plot(dffits(SLR_model), ylab="DFFITS") # Plot all DFFITS
+```
+
+
+```{r}
+## DFBETAS (we are only checking for b1[LAT] for our case but b0[intercept] is also valid check)
+DFBETAS_model <‐ abs(dfbetas(SLR_model)[, 'LAT']) # get absolute values of DFBETAS for LAT
+c <‐ theData[which(DFBETAS_model > 1),] # get LAT DFBETAS > 1
+cbind(c, DFBETA_LAT = DFBETAS_model[DFBETAS_model > 1]) # Print obs with LAT DFBETAS > 1
+plot(DFBETAS_model, ylab="DFBETA (LAT)") # Plot LAT DFBETAS
+```
+
+
+```{r}
+## COOK's Distance
+COOKS_mod <‐ cooks.distance(SLR_model) # get cook's D for all observations
+cutoff <‐ 4/length(COOKS_mod) # cut off at 4/n
+d <‐ theData[which(COOKS_mod > cutoff),]
+cbind(d, COOKsD = COOKS_mod[COOKS_mod > cutoff])
+
+
+```
+
+2. Evaluate the assumptions of SLR using Residual Plots and the Normality Test.  
+
+```{r}
+ols_plot_resid_fit(SLR_model)
+ols_plot_resid_qq(SLR_model)
+ols_test_normality(SLR_model) ## Test normality
+```
+

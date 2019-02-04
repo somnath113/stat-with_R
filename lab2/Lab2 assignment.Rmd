@@ -1,0 +1,109 @@
+---
+title: 'EXST7014: Lab2 Assignment'
+author: "Somnath Mukherjee"
+date: "February 3, 2019"
+output: html_document
+---
+
+
+###  Load required packages and data 
+
+```{r,warning=FALSE,message=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(ggplot2)
+```
+
+
+```{r}
+#read input file
+theData = read.table(here('lab2','data','data2.txt'), header = F, stringsAsFactors = T) #used here() function to specify path
+colnames(theData)=c("CITY","STATE","LAT","RANGE")
+```
+
+
+###  1. Use Residual Plot to check the assumption of homogeneity of variance. Does the data set appear to be homogenous?  
+
+```{r}
+#fit the model
+SLR_model <‐ lm(RANGE ~ LAT, data = theData)
+ols_plot_resid_fit(SLR_model)
+
+```
+
+The points are somewhat evenly scatterred around zero without any appearent curvature. However, due to few of the unusally low values the plot seems to somewhat fan out which is an indication of non-homogeneity.  
+
+###  2. Use the olsrr package or any function you deem appropriate. Does RANGE appear to be normally distributed? Why? Is this relevant to the normality assumption? Why?
+
+```{r,warning=FALSE}
+varRange = theData$RANGE
+ols_test_normality(varRange)
+
+```
+
+The p-value from Shapiro-Wilk test is 0.15 > 0.05.  
+Hence the RANGE appears to be normally distributed.  
+However it is not relevant to the normality assumption. Because for SLR normality assumption is for residuals but not for the predictor or response variable itself.  
+
+```{r}
+ols_test_normality(SLR_model) ## Test normality of SLR model
+```
+
+As a matter of fact Shapiro-Wilk test for normality of residual is < 0.05.  
+
+###  3. Using the lm function fit the regression model. Write down the regression equation and answer: Does the model fit the data well? Why? Is this relevant to the normality assumption? Why?  
+
+```{r}
+#fit the model
+SLR_model <‐ lm(RANGE ~ LAT, data = theData) 
+coef(SLR_model)
+```
+
+The regression model is:  
+RANGE(predicted) = -6.47 + 0.751*LAT  
+```{r}
+ggplot(data = theData,aes(x = LAT,y = RANGE))+
+  geom_point()+
+  geom_smooth(method = lm)+
+  ggtitle('SLR of Temperature versus Latitude') +
+  theme_classic()
+```
+
+The model does not fit the data very well as we can see in the plot above there are a good number of regression outliers.  
+We have some influential observations as well(around 6 of them). Below is the list of influential observations(marked with asterisks)
+
+```{r}
+influence.measures(SLR_model)
+```
+
+
+It is related to the normality assumption as well becasue when we check for Normality of the residuals.
+```{r}
+ols_test_normality(SLR_model)
+```
+As p-value is < 0.05 the normality of the residual in not preserved.
+```{r}
+ols_plot_resid_qq(SLR_model)
+```
+
+Also as seen above not all the obs. hangs around the theoretical quantile. Hence we can not assume homogeneity of variance.
+
+###  4. What is the predicted value of RANGE at LAT=42 ? (Hint use the predict function. See example below)
+
+```{r}
+predict(SLR_model, newdata=data.frame(LAT=42))
+```
+
+### 5. Does there appear to be any possible outlier(s)? State the name and value of the statistics that you use to reach your conclusion.  
+We are checking the rstudent value with bonferonni p-value to evaluate outliers in our SLR model.
+```{r}
+outlierTest(SLR_model)
+
+```
+Note: We can have more/different number of outliers if we use a different function in R[rstudent].
+
