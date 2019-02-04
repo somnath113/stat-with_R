@@ -75,12 +75,6 @@ ggplot(data = theData,aes(x = LAT,y = RANGE))+
 ```
 
 The model does not fit the data very well as we can see in the plot above there are a good number of regression outliers.  
-We have some influential observations as well(around 6 of them). Below is the list of influential observations(marked with asterisks)
-
-```{r}
-influence.measures(SLR_model)
-```
-
 
 It is related to the normality assumption as well becasue when we check for Normality of the residuals.
 ```{r}
@@ -105,5 +99,10 @@ We are checking the rstudent value with bonferonni p-value to evaluate outliers 
 outlierTest(SLR_model)
 
 ```
-Note: We can have more/different number of outliers if we use a different function in R[rstudent].
+Note: We can have more/different number of outliers if we use a different function in R[rstudent].  
+Here is  list of all influential observations as well considering DFFITS,DBETAS & COOKSD values (around 6 of them-marked with asterisks).  
+The observation numbers are obs 4,6,9,11,39 and 43.
 
+```{r}
+influence.measures(SLR_model)
+```
