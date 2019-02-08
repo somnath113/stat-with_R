@@ -9,6 +9,16 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+##  **EXST 7014 Lab 3: Simple Linear Regression: Regression Diagnostics and Assumptions Test**  
+Simple linear regression (SLR) is a common analysis procedure, used to describe the significant
+relationship a researcher presumes to exist between two variables: the dependent (or response)
+variable, and the independent (or explanatory) variable. This lab will familiarize you with how to
+perform SLR using the lm command in R.  
+You might notice that a single observation that is substantially different from all other observations can make a large difference in the results of your regression analysis. If a single observation (or small group of observations) substantially changes your results, you would want to know about this and investigate further. In this lab exercise, we will use appropriate regression diagnostics to detect influential observations.  
+
+In this lab exercise, you will get familiar with and understand the following:  
+*1) Use appropriate regression diagnostics to detect influential observations*  
+*2) Evaluate the assumptions of SLR using Normality test*  
 
 ###  Lab set-up 
 
@@ -26,14 +36,15 @@ library(ggplot2)
 
 ```{r}
 #read input file
-theData = read.table(here('lab2','data','data2.txt'), header = F, stringsAsFactors = T) #use here() function to specify path
+theData = read.table(here('lab3','data','data3.txt'), header = F, stringsAsFactors = T) #use here() function to specify path
 colnames(theData)=c("CITY","STATE","LAT","RANGE")
 ```
 
 The latitude (LAT) and the mean monthly range (RANGE), which is the difference between
 mean monthly maximum and minimum temperatures, are given for a selected set of US
 cities. The following program performs a SLR using RANGE as the dependent variable and
-LAT as the independent variable.  
+LAT as the independent variable.    
+###  Creating a Scatter Plot
 
 ```{r}
 ggplot(data = theData,aes(x = LAT,y = RANGE))+
@@ -54,80 +65,91 @@ b0 is the estimate of the Y-intercept and  b1 is the estimate of the slope coeff
   
 ```{r}
 #fit the model
-SLR_model <‐ lm(RANGE ~ LAT, data = theData)
-summary(SLR_model)
+model1 <‐ lm(RANGE ~ LAT, data = theData)
+summary(model1)
 
 ```
 
-### Observation Diagonistics[Regression outlier, Leverage obs.,influential obs.]  
-**Regression outlier:** We use rstudent(Deleted Studentized residual) measure to check for regression outlier.  
-For our dataset if the value is >2 or <-2 then the point is an outlier.
+### Observation Diagonistics[Regression outlier, Leverage obs.,Influential obs.]  
 
-```{r}
-## R Student - used to check the regression outlier.
-rStudent <‐ rstudent(SLR_model)
-rStudent
-```
-
-
-```{r}
-outlierTest(SLR_model) # run test to get possible outliers considering p-value using adjusted alpha level.(part of car package)
-
-```
-
-**Leverage observation:** Unusally large X value than mean X.  
-
-```{r}
-## Hat diagonal values - to identify leverage outlier(unusual X value)
-HatDiag <‐ lm.influence(SLR_model)$hat # get Hat Diag values
-cutoff <‐ 2*(length(coef(SLR_model))/length(HatDiag)) # cu‐off at 2*p/n
-a <‐ theData[which(lm.influence(SLR_model)$hat > cutoff),] # Print obs with HAT > 2*p/n
-cbind(a, HatDiag[HatDiag > cutoff]) #obs with high hatdiag value
-plot(HatDiag, ylab="HatDiag")
-```
-
-**Influential observation** (based on DFFITS,DFBETAS,COOKSD):  
+**Influential observation** (based on DFFITS,DFBETAS,COOKSD):   
+In order for us to get various diagnostics statistics we need to ask R to apply them in the model we have created earlier using the influence.measures command.  
+This will list the Hat Diag H, the dffits and dfbetas. It also has cook’s d bar and cov.r. These statistics are usually used to detect possible outliers.  
+The package olsrr has a complete analysis for them including great graphics, so we will be using that. For more information on it you can visit:  
+<<https://cran.r-project.org/web/packages/olsrr/vignettes/influence_measures.html>>  
 Astericks beside obs. denotes influential obs.
 
 ```{r}
-# Get ALL INFLUENCE MEASURES DISCUSSED (DFFITS,DFBETAS,COOKSD)
-influence.measures(SLR_model)
+# Get ALL INFLUENCE MEASURES DISCUSSED (DFFITS,DFBETAS,COOKSD,HAT diag)
+influence.measures(model1)
 ```
+
+a) To create Cook’s d bar plot and chart we use the following two simple lines with input our model (model 1)  
 
 ```{r}
-## To get individual outliers(influential obs.) run the codes below.
-## based on DFFITS
-DFFITS_model <‐ abs(dffits(SLR_model)) # get absolute values of DFFITS
-b <‐ theData[which(DFFITS_model > 1),] # get DFFITS > 1
-cbind(b, DFFITS = DFFITS_model[DFFITS_model > 1]) # Print obs with DFFITS >1
-plot(dffits(SLR_model), ylab="DFFITS") # Plot all DFFITS
+CkDbar=ols_plot_cooksd_bar(model1) # Bar plot
+CkDchart=ols_plot_cooksd_chart(model1) # Chart
 ```
 
+Besides the plot that pops up automatically one can view the created lists CkDbar or CkDchart with the commands View(CkDbar) or using the global environment to further analyze the results of the cook analysis if needed.  
+For example, the comman  
 
 ```{r}
-## DFBETAS (we are only checking for b1[LAT] for our case but b0[intercept] is also valid check)
-DFBETAS_model <‐ abs(dfbetas(SLR_model)[, 'LAT']) # get absolute values of DFBETAS for LAT
-c <‐ theData[which(DFBETAS_model > 1),] # get LAT DFBETAS > 1
-cbind(c, DFBETA_LAT = DFBETAS_model[DFBETAS_model > 1]) # Print obs with LAT DFBETAS > 1
-plot(DFBETAS_model, ylab="DFBETA (LAT)") # Plot LAT DFBETAS
+CkDchart$outliers
 ```
 
+That contains the outliers computed by this method.  
 
+b) To create the DFBETAs Panel we again ask ols to apply dfbetas analysis on our model as follows:  
 ```{r}
-## COOK's Distance
-COOKS_mod <‐ cooks.distance(SLR_model) # get cook's D for all observations
-cutoff <‐ 4/length(COOKS_mod) # cut off at 4/n
-d <‐ theData[which(COOKS_mod > cutoff),]
-cbind(d, COOKsD = COOKS_mod[COOKS_mod > cutoff])
-
-
+Dfb = ols_plot_dfbetas(model1) #dfbetas analysis
+Dfb
 ```
 
-2. Evaluate the assumptions of SLR using Residual Plots and the Normality Test.  
-
+c) To compute the Dffits one should use:  
 ```{r}
-ols_plot_resid_fit(SLR_model)
-ols_plot_resid_qq(SLR_model)
-ols_test_normality(SLR_model) ## Test normality
+Dff=ols_plot_dffits(model1) #dffites analysis
+Dff$outlier
 ```
+
+Similarly, you can further explore the Dff list of outputs.  
+d) For the studentized Residual Plot the command is  
+```{r}
+StRes=ols_plot_resid_stud(model1) #Studentized Residual analysis - rstudent
+StRes$outlier
+```
+
+e) For the Standardized Residual Chart you can use  
+```{r}
+ResSta=ols_plot_resid_stand(model1)
+ResSta$outlier
+```
+
+In order to compute 95% confidence intervals for betas, we need to use the following code:  
+```{r}
+BetaConfi=confint(model1,level =0.95)
+BetaConfi
+```
+Confint is a multi-purpose function in R, and the argument level=0.95 changes the confidence interval level. The default, if nothing is provided, is 95%.    
+To find a confidence interval for the **fitted values** the command is:  
+```{r}
+Fitconfi=predict(model1, interval="prediction",level=0.95) #For Fitted values- for a single random value
+Fitconfi
+```
+
+Again, the level can be adjusted to a desired amount. Also, Fitconfi is a matrix with the corresponding values used for further analysis.  
+To find a confidence interval for the **mean values** the command is:  
+```{r}
+Meanconfi=predict(model1, interval = 'confidence',level=0.95) # For mean values
+Meanconfi
+```
+
+
+Again, the level can be adjusted to a desired amount. Also, Meanconfi is a matrix with the corresponding values used for further analysis.    
+Finally, if one wants to find **the confidence interval or the confidence interval for the mean** of a new datapoint with Latitude 10 the following commands will do the trick  
+```{r}
+predict(model1,data.frame(LAT=10),interval="confidence") #confidence for mean
+predict(model1,data.frame(LAT=10),interval="prediction") #confidence for fitted
+```
+
 

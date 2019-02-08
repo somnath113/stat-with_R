@@ -1,0 +1,149 @@
+---
+title: "Lab3 Assignment"
+author: "Somnath Mukherjee"
+date: "Feb 7, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###  Lab set-up 
+
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(ggplot2)
+```
+
+
+```{r}
+#read input file
+theData = read.table(here('lab3','data','data3.txt'), header = F, stringsAsFactors = T) #use here() function to specify path
+colnames(theData)=c("CITY","STATE","LAT","RANGE")
+```
+
+The latitude (LAT) and the mean monthly range (RANGE), which is the difference between
+mean monthly maximum and minimum temperatures, are given for a selected set of US
+cities. The following program performs a SLR using RANGE as the dependent variable and
+LAT as the independent variable.      
+###  Creating a Scatter Plot first  
+
+```{r}
+ggplot(data = theData,aes(x = LAT,y = RANGE))+
+  geom_point()+
+  ggtitle('Scatterplot of Temperature versus Latitude') +
+  theme_classic()
+
+```
+
+###  Fitting the SLR model
+
+Based on the scatterplot produced above, we assume that an appriopriate regression model
+relating RANGE and LAT is the linear model given by  
+  y = b0 + b1x + e  
+where y is the RANGE, x is the LAT, and e is a random error term that is normally distributed with the mean 0 and the unknown variance.  
+b0 is the estimate of the y-intercept and  b1 is the estimate of the slope coeffient.  
+
+  
+```{r}
+#fit the model
+model1 <‐ lm(RANGE ~ LAT, data = theData)
+summary(model1)
+
+```
+The regression model is:    
+RANGE(predicted) = -6.47 + 0.751*LAT  
+
+### Plot the regression line/model  
+```{r}
+ggplot(data = theData,aes(x = LAT,y = RANGE))+
+  geom_point()+
+  geom_smooth(method = lm)+
+  ggtitle('SLR of Temperature versus Latitude') +
+  theme_classic()
+```
+
+The model does not fit the data very well as we can see in the plot above there are a good number of regression outliers.  
+
+### 1. Is the normality assumption violated? State the name and the value of the statistic that you used to reach your conclusion.  
+
+```{r}
+ols_test_normality(model1)
+```
+
+From Shapiro-Wilk test p-value is < 0.05.Hence, the normality of the residual in not preserved.  
+Below is the distribution of fitted-vs-residual plot, which appearently shows non-homogenity.    
+
+```{r}
+ols_plot_resid_fit(model1)
+```
+
+### 2. Does there appear to be any possible influential observation. State the name and the value of the statistics that you used to reach your conclusion.  
+
+Below will list  Hat Diag H, dffits and dfbetas. It also has cook’s d bar and cov.r. These statistics are usually used to detect possible outliers.  
+Astericks beside obs. denotes influential obs.  
+
+```{r}
+# Get ALL INFLUENCE MEASURES DISCUSSED (DFFITS,DFBETAS,COOKSD,HAT diag)
+influence.measures(model1)
+```
+
+Now going by each one of the measures separately:  
+
+*a) Cook’s d chart and analysis*        
+
+```{r}
+CkDchart=ols_plot_cooksd_chart(model1) # Chart
+```
+
+
+```{r}
+CkDchart$outliers 
+```
+
+Above contains the outliers computed by this method.  
+
+*b) To create the DFBETAs Panel we again ask ols to apply dfbetas analysis on our model as follows:*    
+```{r}
+Dfb = ols_plot_dfbetas(model1) #dfbetas analysis
+Dfb$outlier
+```
+
+*c) To compute the Dffits one should use:*  
+```{r}
+Dff=ols_plot_dffits(model1) #dffites analysis
+Dff$outlier
+```
+
+
+*d) For the studentized Residual Plot the command is*  
+```{r}
+StRes=ols_plot_resid_stud(model1) #Studentized Residual analysis - rstudent
+StRes$outlier
+```
+
+*e) For the Standardized Residual Chart you can use*  
+```{r}
+ResSta=ols_plot_resid_stand(model1)
+ResSta$outlier
+```
+
+### 3. What is the confidence interval for the mean Range for all cities with latitude 32.3?
+
+```{r}
+predict(model1,data.frame(LAT=32.3),interval="confidence") #confidence for mean at 95%
+
+```
+
+### 4. What is the confidence interval for Range for a randomly selected city with latitude 32.3?
+
+```{r}
+predict(model1,data.frame(LAT=32.3),interval="prediction") #confidence for fitted at 95%
+```
