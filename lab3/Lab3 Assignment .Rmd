@@ -32,7 +32,8 @@ colnames(theData)=c("CITY","STATE","LAT","RANGE")
 The latitude (LAT) and the mean monthly range (RANGE), which is the difference between
 mean monthly maximum and minimum temperatures, are given for a selected set of US
 cities. The following program performs a SLR using RANGE as the dependent variable and
-LAT as the independent variable.      
+LAT as the independent variable.  
+
 ###  Creating a Scatter Plot first  
 
 ```{r}

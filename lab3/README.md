@@ -11,8 +11,9 @@ theData = read.table(here('lab3','data','data3.txt'), header = F, stringsAsFacto
 colnames(theData)=c("CITY","STATE","LAT","RANGE")
 ```
 
-The latitude (LAT) and the mean monthly range (RANGE), which is the difference between mean monthly maximum and minimum temperatures, are given for a selected set of US cities. The following program performs a SLR using RANGE as the dependent variable and LAT as the independent variable.  
-###  Creat a scatter plot first
+The latitude (LAT) and the mean monthly range (RANGE), which is the difference between mean monthly maximum and minimum temperatures, are given for a selected set of US cities. The following program performs a SLR using RANGE as the dependent variable and LAT as the independent variable.
+
+### Creating a Scatter Plot first
 
 ``` r
 ggplot(data = theData,aes(x = LAT,y = RANGE))+
