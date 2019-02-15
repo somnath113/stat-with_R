@@ -1,0 +1,135 @@
+---
+title: "lab4 Assignment"
+author: "Somnath Mukherjee"
+date: "February 12, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(ggplot2)
+```
+
+
+```{r}
+#read input file
+patients = read.table(here('lab4','data','data4.txt'), header = T, sep = " ") #use here() function to specify path
+str(patients)
+```
+   
+   
+   
+###  Question 1: Make a scatter plot to show the relationship between TIME and ENZ. What is your observation? How about the scatter plot showing the relationship between Log-Time ( that is the log transform of Time) and ENZ.  
+
+```{r}
+ggplot(data = patients,aes(x = enz,y = time))+
+  geom_point(shape=1)+
+  ggtitle('Scatterplot of ENZ versus TIME') +
+  theme_classic()
+
+```
+
+Based on the scatterplot above the relationship between TIME and ENZ does not seem to be linear, rather curvilinear. It somewhat follows an exponential growth model.    
+
+
+```{r}
+ggplot(data = patients, aes(x = enz,y = log(time)))+
+  geom_point(shape = 1)+
+  ggtitle('Scatterplot of ENZ versus LOG-TIME')+
+  theme_classic()
+
+```
+
+Based on the scatterplot above the relationship between Log-Time and ENZ appears to be linear.  
+
+
+###  Question 2: Fit the simple linear regression model TIME = b0 + b1*ENZ + e. Write down the estimated regression function and examine the residual plot and normality test. Describe what you observed and make brief comments.
+
+```{r}
+#' Fit the SLR model, time = B0 + enz (B1) using the lm function
+lm_patients <- lm(time ~ enz, data = patients)
+summary(lm_patients)
+```
+
+Based on the information above our regression model is:  
+TIME(predicted) = -108.71 + 3.96*ENZ  
+From the ANOVA table for F-statistic: 26.39 on 1 and 52 DF,  p-value: 4.25e-06, which implies b1 is significant(and non-zero) and we have some sort of regression effect.  
+However we have a low value for R-squared as 0.3367, which implies that not much of the total variability is explained by the model.  
+Moreover, the intercept (-108.71) looks problematic for a non-significant p-value of 0.08.
+Hence we will check further for the SLR assumptions (normality of residuals and homogenity of variance).   
+
+```{r}
+ggplot(data = patients,aes(x = enz,y = time))+
+  geom_point(shape=1)+
+  geom_smooth(method = lm)+
+  ggtitle('SLR for ENZ and TIME') +
+  theme_classic()
+  
+```
+
+From the plot above we can see some possible outliers and leverage observations. Those will be more clear in the residual plot.  
+Residual Plot and Normality test.  
+
+```{r}
+ols_plot_resid_fit(lm_patients)
+ols_test_normality(lm_patients)
+```
+
+
+The residual plot appears to be fan shaped (fans out in fact) which indicates non-homogeneous variance.  
+And from Shapiro-Wilk p-value, we can say that normality of residuals is not preserved.  
+
+### Question 3: Fit the exponential model logTIME = b0 + b1ENZ + e. Write down the estimated regression function.Does the model fit well? Why?  
+
+```{r}
+#Fit the new model as curvilinear model(intrinsically linear)
+log_patients = lm(log(time) ~ enz, data = patients)
+summary(log_patients)
+
+```
+
+Based on the information above our regression model is:  
+TIME(predicted) = 3.55 + 0.019*ENZ  
+From the ANOVA table for F-statistic: 41.25 on 1 and 52 DF,  p-value: 4.118e-08, which implies b1 is significant(and non-zero) and we have regression effect. The intercept also looks much better and consistent.    
+We have a better R-squared as 0.4424.   
+Next we will check further for the SLR assumption (normality of residuals and homogenity). 
+
+```{r}
+ggplot(data = patients, aes(x = enz,y = log(time)))+
+  geom_point(shape = 1)+
+  geom_smooth(method = lm)+
+  ggtitle('SLR for ENZ and LOG-TIME') +
+  theme_classic()
+```
+
+```{r}
+ols_plot_resid_fit(log_patients)
+ols_test_normality(log_patients)
+
+```
+
+The residual plot looks much better with random scatter around the zero value. No appearent curvature or shape.  
+And from Shapiro-Wilk test (p-value as 0.87) we can assume normality of the residual is preserved.  
+
+### Question 4:Compare the simple linear model in Question 1 and the exponential model in Question 2, do you observe any improvements after conducting the exponential model relative to the linear model? Support your conclusion with details (such as R-Square, homogeneity of variance and normality test)
+
+There are clearly some improvement with the curvilinear model (exponential growth model) over the simple linear model and I have already pointed them out during Q2 and Q3.  
+We have better R-square and model fit for exponential model.  
+For exponential model both homogeneity of variance and normality of residual assumptions are preserved.  
+Hence we can conclude that exponential model is a better fit for the given data.  
+
+
+
+
