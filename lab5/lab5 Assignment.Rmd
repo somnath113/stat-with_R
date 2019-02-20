@@ -1,0 +1,144 @@
+---
+title: "EXST 7014: lab5 Assignment"
+author: "Somnath Mukherjee"
+date: "February 19, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(ggplot2)
+```
+
+
+```{r}
+#read input file
+asphalt = read.table(here('lab5','data','data5.txt'), header = T, sep = " ",dec = ".") #use here() function to specify path
+str(asphalt)
+```
+   
+   
+```{r,warning=FALSE,message=FALSE}
+asphalt$y1 = as.numeric(as.character(asphalt$y1))
+asphalt$y2 = as.numeric(as.character(asphalt$y2))
+attach(asphalt)
+
+```
+
+###  1. Use the function lm to fit the multiple linear regression model Y2 = β0 + β1X1 + β2X2+ β3X3 + ε.Write down the estimated regression equation. What hypothesis does the F-test in ANOVA table test? What is the conclusion based on the ANOVA table?
+
+```{r}
+model1 <- lm(y2 ~ x1+x2+x3, x=T)
+summary(model1)
+```
+
+Based on the table above our estimated regression equation is:  
+Y2_Predicted = -5.611 + 0.667X1 - 1.23X2 + 0.073X3  
+The hypotheses in F-test for the ANOVA table checks for regression effect which can be written as:    
+H0: β1 = β2 = β3 = 0  
+H1: At least one of the β is not equal to zero.  
+Now based on the data above we get for F-statistic: 15.84 on 3 and 15 DF,  p-value: 6.447e-05, which is much less than alpha of 0.05.  
+Hence we will reject our null hypothese and conclude that at least one of the β is not equal to zero.  
+
+### 2. Are the regression coefficients significant? Are they consistent with the F test in question 1?
+
+Considering an alpha level of 0.05 as cutoff for significance and based on the data above, we can conclude that all of the regression co-efficients are significant. To determine, we look at the p-value from individual t-test presented in the last column [Pr(>|t|)].  
+The result is consistent with joint-test for partial regression coefficients(see Q1 above) presented with F-statistics.  
+[NOTE: This can be an early indicator that we might not have multicollinerity problem.]  
+
+###  3. Suppose that there is a specimen with X1 = 9, X2 = 2.0 and X3 = 83. Estimate the strain of the specimen as well as its 95% confidence interval.
+
+
+```{r}
+predict(model1,data.frame(x1 = 9, x2 = 2, x3 = 83),interval="prediction") #confidence for fitted at 95%
+```
+
+### 4. What are the assumptions of the fitted model? Evaluate those assumptions by using proper R output.  
+
+The assumptions are similar to that of SLR as:  
+*1.Normality of residuals*    
+```{r}
+ols_test_normality(model1)
+```
+Based on the Shapiro-Wilk test value of 0.48 (> 0.05), we can assume normality of residual is preserved.   
+*2. Homogenity of variance.*    
+```{r}
+ols_plot_resid_fit(model1)
+```
+
+Based on the above distribution of residual-vs-Fitted plot, the values does seem to scatter randomly around zero.Rather there is some kind of curvature present,which indicates non-homogenity of variance.  
+*3. The observations are independent of each other.(given as assumed)*  
+
+### 5. Fit necessary models to find SS (X3|X1, X2) and SS (X3|X2).
+
+```{r}
+an1=Anova(model1, type="II") # Will help us compute the (type II) SS
+an1
+```
+
+
+SS (X3|X1, X2) = SS of X3 given X1 and X2. From the above table we get it as 130.107.  
+
+```{r}
+model2 <- lm(y2 ~ x2+x3, x=T) # This is the reduced multilinear regression model.
+an2=Anova(model2, type="II") # Will help us compute the (type II) SS
+an2
+```
+
+SS (X3|X2) = SS of X3 given X2. From the table above we get that as 162.704.  
+
+### 6. Is there indication of any possible problem of multicollinearity? Support your answer with proper R output.
+
+
+```{r}
+ols_coll_diag(model1) # Collinearity diagnostics table
+
+```
+
+There is no value with **Condition Index** greater than 30. Hence there is no appearent problem of multicollinearity.
+
+```{r}
+ols_vif_tol(model1) # VIF computation
+
+```
+
+There is no **VIF** value which is greater than 10 and the avgerage VIF is also not greater than 2.  
+Hence there is no appearent problem of multicollinearity.  
+
+### 7. Examine each F-test of parameter estimates with different type of SS. Which F-test results are identical to the results of T-test for parameter estimates? What is relationship between F-value and Tvalue?  
+
+```{r}
+anv1=anova(model1) # Sequential (type I) SS
+anv1
+```
+
+```{r}
+anv2=Anova(model1, type="II") # Will help us compute the (type II) SS
+anv2
+```
+
+```{r}
+anv3=Anova(model1, type="III") # Will help us compute the (type III) SS
+anv3
+```
+Compare with multiple regression model:  
+```{r}
+summary(model1)
+```
+
+
+By looking at the tables above we can conclude:  
+1. The F-test p-values for TYPE-|| and TYPE-||| SS matches exactly with regression model T-test p-values. However, for TYPE-| we see a mismatch.      
+2. The *square* of t-value in regression model is equal to the F-value for TYPE-|| and TYPE-||| SS.  

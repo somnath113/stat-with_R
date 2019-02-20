@@ -1,0 +1,97 @@
+---
+title: "lab5 Assignment"
+author: "Somnath Mukherjee"
+date: "February 12, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(ggplot2)
+```
+
+
+```{r}
+#read input file
+asphalt = read.table(here('lab5','data','data5.txt'), header = T, sep = " ",dec = ".") #use here() function to specify path
+str(asphalt)
+```
+   
+   
+```{r}
+asphalt$y1 = as.numeric(as.character(asphalt$y1))
+asphalt$y2 = as.numeric(as.character(asphalt$y2))
+attach(asphalt)
+
+```
+
+```{r}
+model1 <- lm(y2 ~ x1+x2+x3, x=T)
+summary(model1)
+```
+
+```{r}
+an1=anova(model1) # Sequential (type I) SS
+an1
+```
+
+```{r}
+SS1 = an1$`Sum Sq` #List of Sums of Squares Type I
+View(SS1)
+```
+
+
+
+
+```{r}
+an2=Anova(model1, type="II") # Will help us compute the (type II) SS
+an2
+SS2=an2$`Sum Sq`# List of Sums of Squares Type II
+```
+
+
+```{r}
+an3=Anova(model1, type="III") # Will help us compute the (type III) SS - Anova is from Car package. Not in base R.
+an3
+SS3=an3$`Sum Sq`# List of Sums of Squares Type II
+```
+
+```{r}
+model2 <- lm(y2 ~ x1+x3, x=T) # This is the reduced multilinear regression model.
+an4=anova(model1, model2) # This computes the difference between the full model and the reduced one
+an4
+```
+
+```{r}
+ols_coll_diag(model1) # Collinearity diagnostics table
+
+```
+
+
+```{r}
+ols_vif_tol(model1) # VIF computation
+
+```
+
+```{r}
+ols_plot_obs_fit(model1) # Observed vs Predicted Plot
+
+```
+
+
+```{r}
+ols_plot_diagnostics(model1) # A panel of plots for regression diagnostics
+```
+
