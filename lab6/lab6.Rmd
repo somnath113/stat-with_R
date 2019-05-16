@@ -1,0 +1,130 @@
+---
+title: "lab6"
+author: "Somnath Mukherjee"
+date: "March 6, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(rsq)
+library(tidyverse)
+```
+
+
+```{r}
+#read input file
+liver = read.table(here('lab6','data','data6.txt'), header = T, na.strings = ".") #use here() function to specify path
+str(liver)
+```
+   
+   
+```{r}
+#' fit the full model without preprocessing the variables - hence raw vars
+fullRaw.lm <- lm(Y ~ bodyWT+liverWT+dose, data=liver)
+summary(fullRaw.lm)
+
+```
+
+```{r}
+liver_noNA <- na.omit(liver) # remove any NA rows
+#' apply the @scale function to all columns in the @liver_noNA
+#' dataset by using the @lapply function
+#'
+#' the lapply function produces a list of the variables
+#' convert list to data frame by using the @as.data.frame function
+#' Store transformerd dataset as liver_trans
+liver_trans <- as.data.frame(lapply(liver_noNA, scale))
+str(liver_trans)
+```
+
+```{r}
+# Fit the model with standardized coefficients
+fullTrans.lm <- lm(Y ~ bodyWT+liverWT+dose, data=liver_trans)
+summary(fullTrans.lm)
+```
+
+```{r}
+#' Produces the usual summary report of the lm object
+#' including the correlation matrix - which can
+#' be seen at the tail end of the summary report
+#' summary(fullRaw.lm, corr=TRUE)
+#' Subset the above output to report only the correlation
+#' matrix using the @$correlation
+summary(fullRaw.lm, corr=TRUE)$correlation
+```
+
+
+
+
+```{r}
+#' the @Anova function below is from the car package
+#' and it is different from the base R @anova function
+#'
+#' The car Anova allows you to extract Type II, III SS
+#library(car)
+Anova(fullRaw.lm, type=2) # Type II SS for the Raw Model
+```
+
+
+```{r}
+#' The @rsq.partial function is from the rsq pacakge
+#' it takes the model object as its argument
+#'
+#' it produces the partial R-Square type II
+rsq.partial(fullRaw.lm)
+#' Alternatively you can square the partial correlations from the
+#' @ols_correlations function to get the Partial R^2 Type II
+(ols_correlations(fullRaw.lm)$Partial)^2
+
+``` 
+
+```{r}
+#' To get the semi-partial R-Square Type II Use
+(ols_correlations(fullRaw.lm)$Part)^2
+```
+
+```{r}
+ols_coll_diag(fullRaw.lm) # Produces both VIF and Condition Index
+
+```
+
+
+```{r}
+results <- list() #generate empty list to host models
+#' @length(fullRaw.lm$model) produces a number indicating the number of
+#' columns or models to fit
+#'
+#' @data = fullRaw.lm$model[1:i]) extracts only the relevant variables
+#' to fit the model at each iteration
+#'
+for (i in 1:length(fullRaw.lm$model)){
+results[[i]] <- coefficients(lm(Y~., data = fullRaw.lm$model[1:i]))
+# apply coefficients to extract coefficients of each model
+}
+results
+
+```
+
+```{r}
+ols_plot_obs_fit(fullRaw.lm) # Observed vs Predicted Plot
+
+```
+
+
+```{r}
+ols_plot_diagnostics(fullRaw.lm) # A panel of plots for regression diagnostics
+```
+

@@ -1,0 +1,101 @@
+---
+title: "lab9 Assignment"
+author: "Somnath Mukherjee"
+date: "March 26, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(rsq)
+library(tidyverse)
+library(MASS)
+library(aod)
+library(ResourceSelection)
+library(ggplot2)
+```
+
+
+```{r}
+#read input data and clean it up.
+ONE = read.table(here('lab9','data',"data9.txt"), header = TRUE,sep = " ",dec = ".")
+ONE_clean = ONE[1:23,] #removing rows with NA values.
+summary(ONE_clean) # Gives the summary statistics of the dataset
+
+```
+
+### 1.Write the logistic regression equation to model the odds of distress as a function of temperature.  
+
+Logistic Regression is a type of predictive model that can be used when the dependent variable is a categorical variable with two categories.  
+The dependent variable can take the value 1 with a probability of success (p), or the value 0 with a probability of failure (1-p).  
+The logarithm of odds, logit, results in a linear model, the logistic regression:  
+                        Logit = log(odds of distress) = b0 + b1*temp  
+                        
+### 2.Perform a logistic regression and report the regression parameters and their 99% confidence intervals.  
+  
+```{r}
+mylogit <- glm(distress ~ temp, data = ONE_clean, family = "binomial")
+summary(mylogit)
+```
+Based on the table data above our logistics model become:   
+Logit = log(odds of distress) = 15.04 - 0.2322*temp    
+Both intercept and temp is significant based on the p-values at 5% significance level.  
+
+
+```{r}
+confint(mylogit,level=0.99) # CIs using profiled log-likelihood
+exp(confint.default(mylogit,level=0.99)) # Wald Confidence Intervals for odds ratio
+```
+
+### 3.Does temperature affect the odds of distress? Explain the reason for your answer.    
+Yes, temperature does affect the odds of distress.    
+If you check the regression table above we can see temp is significant with a p-value (0.0320 < 0.05).    
+
+```{r}
+exp(coef(mylogit,level=0.99)) # Odds Ratios
+```
+Based on the odds ratio above we can interpret that with 1 unit increase in temperature there will be (1-.79)*100 = 21% decrease in distress.    
+
+### 4.What is the probability of distress at 66 degrees? How about at 35 degrees?  
+
+probability of distress at 66 degrees  
+```{r}
+predict(mylogit,data.frame(temp = 66),type="response")
+```
+
+probability of distress at 35 degrees  
+```{r}
+predict(mylogit,data.frame(temp = 35),type="response")
+```
+
+### 5.Plot the probability curve and describe it.  
+
+
+```{r}
+newdata=data.frame(temp=seq(5,81,0.01))
+newdata$distress=predict(mylogit,newdata,type = "response")
+```
+
+
+```{r}
+plot2=ggplot(newdata, aes(x = temp, y = distress)) +
+ geom_point()+
+ theme_classic()
+plot2
+```
+
+  
+As we can observe in the graph above, distress is prevalent when the temperature is low (0 to 50).However, once the temperature reaches around 60, the trend changes and with higher the temperature we can see there is no distress.  
+Overall, the probability of distress decreases as temperature increases.  

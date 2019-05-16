@@ -1,0 +1,88 @@
+---
+title: "lab9"
+author: "Somnath Mukherjee"
+date: "March 16, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(rsq)
+library(tidyverse)
+library(MASS)
+library(aod)
+library(ResourceSelection)
+library(ggplot2)
+```
+
+
+```{r}
+ONE = read.table(here('lab9','data',"data9.txt"), header = TRUE,sep = " ",dec = ".")
+ONE_clean = ONE[1:23,]
+summary(ONE) # Gives the summary statistics of the dataset
+sd(ONE$temp) # Computes standard deviation for the variable temp
+
+```
+   
+```{r}
+mylogit <- glm(distress ~ temp, data = ONE_clean, family = "binomial") # Training of the logistic model
+summary(mylogit) # Gives a summary of the model
+```
+
+Logit = 15.04 -0.2322*temp
+
+
+```{r}
+confint(mylogit,level=0.99) # CIs using profiled log-likelihood
+exp(confint.default(mylogit,level=0.99)) # Wald Confidence Intervals for odds ratio
+```
+
+```{r}
+exp(coef(mylogit,level=0.99)) # Odds Ratios
+```
+
+```{r}
+exp(cbind(OR = coef(mylogit,level=0.99), confint(mylogit,level=0.99))) # Odds ratio and CI
+```
+```{r}
+predict(mylogit,data.frame(temp = 66),type="response")
+```
+
+
+```{r}
+TWO=ONE_clean
+TWO$predictions=predict(mylogit,TWO,type = "response")
+```
+
+```{r}
+plot1=ggplot(TWO, aes(x = distress, y = predictions)) +
+ geom_point()+
+ theme_classic()
+plot1
+```
+
+```{r}
+newdata=data.frame(temp=seq(5,81,0.01))
+newdata$distress=predict(mylogit,newdata,type = "response")
+```
+
+
+```{r}
+plot2=ggplot(newdata, aes(x = temp, y = distress)) +
+ geom_point()+
+ theme_classic()
+plot2
+```
+

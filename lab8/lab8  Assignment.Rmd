@@ -1,0 +1,123 @@
+---
+title: "lab8 Assignment"
+author: "Somnath Mukherjee"
+date: "March 24, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(rsq)
+library(tidyverse)
+library(MASS)
+```
+
+
+```{r}
+#read input file
+#' @sep="" because the columns are seperated by 'space'
+Expenditure = read.table(here('lab8','data',"data8.txt"), header = TRUE)
+str(Expenditure) # get a structure (description) of your dataset
+
+```
+
+###   Question 1: Describe the trend in the scatterplot of the raw data: what is the relationship between variables EX and MET?  
+
+```{r}
+with(Expenditure, plot(MET, EX)) # Plot model variables
+```
+
+Based on the scatterplot above, the relationship between variables EX and MET does not appear to be linear. It appears to have a curvature with a bowl shape.  
+
+###  Question 2: Fit a polynomial regression model with cubic term of MET. When you decide whether the cubic term and quadratic term should be included in the model, do you use the Type I SS or Type II SS? Why?  
+   
+```{r}
+#' Use the identity function @I() to create polynomial terms
+cubicModel <- lm(EX ~ MET + I(MET^2) + I(MET^3), data=Expenditure)
+options(scipen=999) # prevents R from reporting numbers with scientific notation
+summary(cubicModel)
+
+```
+
+Based on the F-statistics  p-value: 0.002345 < 0.05, overall our model is significant.  
+The parameter estimates can be found in the table above under 'Estimate' column.  
+
+```{r}
+#' Extract Type I SS
+anova(cubicModel)
+```
+
+As we are using polynomial regression we should use TYPE-1 SS to decide whether the cubic term and quadratic term should be included in the model. When fitting polynomial regression models, if a particular model term is significant, all terms of lower order
+should be assumed significant and retained in the regression model. For this reason, the sequentially adjusted
+Type I Sums of Squares should be used when one attempts to test whether a polynomial model is as
+good as the one with a higher order term.   
+
+```{r}
+#' plot fitted values against model residuals
+plot(cubicModel, which=1)
+#' Tests the assumption of the normality of the residuals
+ols_test_normality(cubicModel)
+
+```
+
+
+###  Question 3: Is the cubic effect significant? How about quadratic and linear effects?  
+
+To determine the answer for above question, let us first fit the other models.    
+Fitting a Polynomial Regression Model with a Quadratic term of MET.    
+
+```{r}
+quadModel <- lm(EX ~ MET + I(MET^2), data=Expenditure)
+summary(quadModel)
+#' Extract Type I SS
+anova(quadModel)
+```
+
+Fitting a Linear Regression Model with a linear term of MET.  
+
+```{r}
+linModel <- lm(EX ~ MET, data=Expenditure)
+summary(linModel)
+#' Extract Type I SS
+anova(linModel)
+```
+
+From the TYPE-1 SS, in the cubic model, the cubic effect is not significant (0.1065086 > 0.05).    
+From the TYPE-1 SS, in the quadratic model, both the linear(0.001178 < 0.05) and quadratic(0.000622 < 0.05) terms are significant.  
+Overall model is also significant with p-value: 0.002567 for quadratic model.   
+From the TYPE-1 SS, in the linear model, the linear effect is not significant (0.76 > 0.05).  
+Hence, quadratic model is our best fit given the set of data.  
+
+### Question 4: Based on your answers to the above questions and the SAS or R output, which polynomial model do you consider the best? Write down the polynomial model with the estimated coefficient values. Do you keep the linear term in the model? Why?
+
+Based on my analysis for question-3, I will consider the quadratic polynomial model to be best.  
+Our model is:  
+EX_predicted = 336.53 - 3.81156*MET + 0.04436*MET^2  
+  
+Yes, we do keep the linear term in the model.When fitting polynomial regression models, if a particular model term is significant, all terms of lower order should be assumed significant and retained in the regression model as we use sequentially adjusted Type I Sums of Squares while fitting the model.  
+
+### Question 5: Now assume that there is a state where 80 percent of its residents live in standard metropolitan areas. Use the best model to predict the per capita public expenditure of this state. Is there any problem in doing so?  
+
+
+```{r}
+predict(quadModel,data.frame(MET = 80),interval="prediction") #confidence for fitted at 95%
+```
+
+```{r}
+range(Expenditure$MET)
+```
+
+If we observe the range of values for MET in given dataset, we can conclude that 80 falls within the range. Hence there should not be any issue with the predicted value.  
+However, extrapolation outside the range of the fitted experimental data is untenable, and should not be attempted.  

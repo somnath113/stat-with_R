@@ -1,0 +1,115 @@
+---
+title: "lab10 Assignment"
+author: "Somnath Mukherjee"
+date: "April 2, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#' a function to only install needed but unavailable packages
+#' and loads these packages after installation
+ipak <- function(pkg){
+new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+if (length(new.pkg))
+install.packages(new.pkg, dependencies = TRUE)
+sapply(pkg, require, character.only = TRUE)
+}
+# use function to install and load packages
+packages <- c('olsrr', 'car', 'lattice', 'agricolae', 'emmeans','here')
+ipak(packages)
+#' olsrr # assesses model fit and variable diagnostics
+#' car # for Type II, III SS
+#' lattice # for boxplot with mean - bwplot function
+#' agricolae # for LSD Test
+#' emmeans # for post-hoc tests
+```
+
+### Read input file
+```{r}
+hearing = read.table(here('lab10','data',"data10.txt"), header = TRUE,colClasses = c("integer", "factor", "integer"))
+str(hearing) # get a structure (description) of your dataset
+
+```
+
+### Question1: Write the linear model to test the hypothesis that there is no treatment effect. Clearly describe each term in the model, and the range of the subscripts. Write the null hypothesis that you are testing.   
+
+```{r}
+#' chart boxplot with mean
+library(lattice)
+bwplot(score ~ list, data = hearing)
+```
+
+
+Linear model to test the hypothesis that there is no treatment effect can be written as below:  
+
+Yij = μ + Ti + ϵij = μi + ϵij  where  
+ μ is the overall mean  
+ Ti are the treatment level effects (for our case range of i is 1 to 4)  
+ ϵij is the random error(i is from 1 to 4 and j is from 1 to 24)  
+ μi is the mean of the ith level of treatment  
+ Yij is the response variable (i is from 1 to 4 and j is from 1 to 24). For our case percent of words heard correctly was recorded and will be used as the response variable.    
+   
+The null hypothesis test of one-way ANOVA is that the means of the response variable are the same for the different levels of treatment   
+(H0 : μ1 = μ2 = μ3 = μ4); the alternative hypothesis is that they are not all the same.  
+
+
+
+### Question2: Fit a model to test the hypothesis you stated in Question 1. Report your results, including your F-value, p-value, and conclusions. 
+
+Fitting a model  
+```{r}
+#' ANOVA as a linear model
+lmMod <- lm(score ~ list, data=hearing)
+summary(lmMod)
+```
+
+
+```{r}
+#' ANOVA model
+aovLM <- aov(lmMod)
+summary(aovLM)
+```
+
+Based on the tables above for our one-way ANOVA test we get F-statistic: 4.919 and  p-value: 0.00325 < 0.05.  
+Hence, we will reject our null hypotheses and conclude that the means of the response variable are not same for the different levels of treatments( list1-4).  
+
+### Question3: List the assumptions necessary for your analysis and determine whether they have been violated. Include any relevant SAS or R output in you report.    
+There are three assumptions for ANOVA:the treatments are independently sampled, residuals or deviation of observations within groups should be normally distributed, and the variance from each level of treatment is the same (i.e. homogeneous variance).  
+
+
+```{r}
+# Test for Homogeneity of Variance
+bartlett.test(score ~ list, data=hearing)
+```
+
+The p-value = 0.9543 > 0.05.Hence the homogeneity of variance assumption is not violated.   
+
+```{r}
+#' Test for Normality of Residuals
+ols_test_normality(lmMod)
+```
+The SW p-value = 0.0967 > 0.05.Hence the normality assumption is not violated.  
+
+### Question4: If there is a significant treatment effect, describe which pairs of means are different. Explain which adjustment method you chose.    
+For post-ANOVA analysis I have chosen Tukey's adjustment for pariwise comparison.    
+
+```{r}
+#' Pairwise Tukey Test
+TukeyHSD(aovLM, conf.level = 0.95)
+
+#' plot(tukeyTest, comparisons = TRUE)
+#' Set plot/chart area margins
+#' par(oma=c(b,l, t,r))
+#' b=bottom, l=left, t=top and r=right margins
+par(oma=c(0,5,0,0)) # this was done to allow room for
+plot(TukeyHSD(aovLM, conf.level = 0.95),las=1, col = "red")
+```
+
+Based on the table above the pairs of means which are significantly different based on p-value (less than 0.05) are:  
+List3-List1,and List4-List1. Which is clearly visible from the figure of family-wise CI at 95%.   

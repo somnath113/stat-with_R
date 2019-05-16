@@ -1,0 +1,119 @@
+---
+title: "lab7"
+author: "Somnath Mukherjee"
+date: "March 16, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(rsq)
+library(tidyverse)
+library(MASS)
+```
+
+
+```{r}
+#read input file
+RENTS=read.table(here('lab7','data',"data7.txt"), header = TRUE, sep = "", dec = ".")
+RENTS=RENTS[,-1] # Removes the column with the observation number.
+RENTS[,c(1:4,9)] = lapply(RENTS[,c(1:4,9)], as.numeric) # Makes sure that all numeric variables are seen as such by R
+RENTS[,5:8] = lapply(RENTS[,5:8], as.factor) # Makes sure that all factor variables are seen as such by R
+```
+   
+   
+```{r}
+#' fit the full model for MLR
+full.model <- lm(rent ~., data = RENTS)
+summary(full.model)
+
+```
+
+```{r}
+stepback.model <- stepAIC(full.model, direction = "backward",trace = FALSE)
+summary(stepback.model)
+
+```
+
+
+```{r}
+stepfor.model <- stepAIC(full.model, direction = "forward",trace = FALSE)
+summary(stepfor.model)
+
+```
+
+```{r}
+stepboth.model <- stepAIC(full.model, direction = "both",trace = FALSE)
+summary(stepboth.model)
+
+```
+
+For the full model:
+
+```{r}
+an1=anova(full.model) # Traditional Analysis of variance
+SS1=an1$`Sum Sq`# List of Sums of Squares Type I
+SS1
+an1
+```
+
+For the backward selection:
+
+```{r}
+an2=anova(stepback.model) # Traditional Analysis of variance
+SS2=an2$`Sum Sq`# List of Sums of Squares Type I
+SS2
+an2
+```
+
+For the forward selection:
+```{r}
+an3=anova(stepfor.model) # Traditional Analysis of variance
+SS3=an3$`Sum Sq`# List of Sums of Squares Type I
+SS3
+an3
+```
+
+For both stepwise:
+```{r}
+an4=anova(stepboth.model) # Traditional Analysis of variance
+SS4=an4$`Sum Sq`# List of Sums of Squares Type I
+SS4
+an4
+```
+
+```{r}
+reduced.model <- lm(rent ~  age + sqft + sd + unts + gar + cp,data = RENTS ) # This is the reduced multilinear regression model. Add the exploratory variables of interest here
+summary(reduced.model)
+```
+
+```{r}
+ols_coll_diag(reduced.model) # Collinearity diagnostics table
+```
+
+```{r}
+ols_plot_obs_fit(reduced.model) # Observed vs Predicted Plot
+```
+
+
+```{r}
+ols_plot_diagnostics(reduced.model) # A panel of plots for regression diagnostics
+```
+
+```{r}
+ols_test_normality(reduced.model)
+ols_plot_resid_qq(reduced.model)
+```
+

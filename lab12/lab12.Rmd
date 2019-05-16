@@ -1,0 +1,134 @@
+---
+title: "lab12 Assignment"
+author: "Somnath Mukherjee"
+date: "April 23, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.width=4, fig.height=3)
+```
+
+
+
+```{r include=FALSE}
+ipak <- function(pkg){
+new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+if (length(new.pkg))
+install.packages(new.pkg, dependencies = TRUE)
+sapply(pkg, require, character.only = TRUE)
+}
+# use function to install and load packages
+packages <- c('lme4', 'EMSaov')
+ipak(packages)
+
+#lme4 # to fit the linear mixed-effect model
+#EMSaov # to extract expected mean square(EMS) formulae for the ANOVA components
+```
+
+
+
+```{r include=FALSE}
+#' Create an object called @auto to host the data set
+#'
+#' @colClasses= to specify the respective data classes of each column
+#' N/B the 1st 3 columns are factor sor repeat (@rep) "factor" 3 times
+#' the last column is an integer so, "integer"
+auto <- read.table(header = T,
+colClasses = c(rep("factor", 3), "integer"),
+text=' car driver additive reduct
+1 I A 21
+2 I B 26
+3 I D 20
+4 I C 25
+1 II D 23
+2 II C 26
+3 II A 20
+4 II B 27
+1 III B 15
+2 III D 13
+3 III C 16
+4 III A 16
+1 IV C 17
+2 IV A 15
+3 IV B 20
+4 IV D 20 ')
+str(auto)
+```
+
+
+```{r include=FALSE}
+#Get exhaustive notes with examples on fitting mixed effects models in R; for Linear Mixed and multilevel modelling -from the lme4 package.
+vignette(topic="lmer", package = "lme4")
+```
+
+### Q1. According to the model, does the additive type have any significant effect on reducing NOX emission? Can the effects of Cars or Drivers be ignored in this model?
+
+```{r}
+# Standard Model fitted with Restricted (Residual) Maximum Likelihood Estimation
+#The model object is named to mirror the different models fitted using SAS
+#random effects are specified with the pipe symbol sandwiched between 1 and the name of the random effect variable e.g. (1|car)
+fit.REML <- lmer(reduct ~ additive + (1|car) + (1|driver), data=auto)
+summary(fit.REML)
+anova(fit.REML) # Get Type 3 Anova Test
+```
+
+
+```{r }
+#Model with EMS Details
+#"additive" is treated as a fixed effect,
+#"car" and "driver" are treated as random effects.
+#Therefore, @type = c("F","R","R") following their order in the formula
+fit.Type3 <- EMSanova(reduct ~ additive+car+driver, data=auto,
+type=c("F","R","R"))
+#Remove or Pool interaction (:) effects to the error/residual term
+del.ID <- c("additive:car", "additive:driver", "car:driver", "Residuals")
+fitType3_Pooled <- PooledANOVA(fit.Type3, del.ID)
+fitType3_Pooled
+```
+
+(1) Yes, since the p-value is less than 0.05, we can conclude that the additive type have any significant effect on reducing NOX emission.  
+
+(2) Since the p-value is greater than 0.05, we can conclude that the effects of cars can be ignored in this model.  
+
+In addition, since the p-value is less than 0.05, we can conclude that the effects of drivers can not be ignored in this model.  
+
+
+```{r include=FALSE}
+#' Get quick help with examples on the EMSanova and Pooled ANOVA functions
+?EMSanova
+?PooledANOVA
+```
+
+```{r include=FALSE}
+#Checking Assumptions
+#Test for Homogeneity of Variance
+bartlett.test(reduct ~ additive, data=auto)
+```
+
+```{r include=FALSE}
+#Testing for Normality
+#' (Residuals vs. Fitted Values) and QQ Plots colored by Additive types
+plot(fit.REML, col=auto$additive, which=c(1,2))
+#' Q-Q Plot with Confidence Bands
+require(MASS)
+library("car")
+qqp(residuals(fit.REML), "norm")
+#' Alternative QQ-Plot
+qqnorm(residuals(fit.REML))
+qqline(residuals(fit.REML))
+```
+
+```{r include=FALSE}
+#' Test for Normality of Residuals
+shapiro.test(residuals(fit.REML))
+```
+
+
+### Q2. There is an important assumption for Latin Square Design besides the usual assumptions for the linear model (normality, homogeneous variance et al). What is that?
+
+The Latin Square Design is appropriate only if effects of all three factors (row block, column block and
+treatment) are additive, i.e., all interactions are zero.  
+
+
+

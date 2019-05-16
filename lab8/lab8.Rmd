@@ -1,0 +1,100 @@
+---
+title: "lab8"
+author: "Somnath Mukherjee"
+date: "March 16, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(rsq)
+library(tidyverse)
+library(MASS)
+```
+
+
+```{r}
+#read input file
+#' @sep="" because the columns are seperated by 'space'
+Expenditure = read.table(here('lab8','data',"data8.txt"), header = TRUE)
+str(Expenditure) # get a structure (description) of your dataset
+with(Expenditure, plot(MET, EX)) # Plot model variables
+
+```
+   
+   
+```{r}
+#' Use the identity function @I() to create polynomial terms
+cubicModel <- lm(EX ~ MET + I(MET^2) + I(MET^3), data=Expenditure)
+options(scipen=999) # prevents R from reporting numbers with scientific notation
+summary(cubicModel)
+#' Extract Type I SS
+anova(cubicModel)
+```
+
+```{r}
+#' plot fitted values against model residuals
+plot(cubicModel, which=1)
+#' Tests the assumption of the normality of the residuals
+ols_test_normality(cubicModel)
+
+```
+
+Fitting a Polynomial Regression Model with a Quadratic term of MET  
+
+```{r}
+quadModel <- lm(EX ~ MET + I(MET^2), data=Expenditure)
+summary(quadModel)
+#' Extract Type I SS
+anova(quadModel)
+#' plot fitted values against model residuals
+plot(quadModel, which=1)
+#' Tests the assumption of the normality of the residuals
+ols_test_normality(quadModel)
+
+```
+
+
+```{r}
+linModel <- lm(EX ~ MET, data=Expenditure)
+summary(linModel)
+#' Extract Type I SS
+anova(linModel)
+#' plot fitted values against model residuals
+plot(linModel, which=1)
+#' Tests the assumption of the normality of the residuals
+ols_test_normality(linModel)
+```
+
+
+
+```{r}
+ols_coll_diag(reduced.model) # Collinearity diagnostics table
+```
+
+```{r}
+ols_plot_obs_fit(reduced.model) # Observed vs Predicted Plot
+```
+
+
+```{r}
+ols_plot_diagnostics(reduced.model) # A panel of plots for regression diagnostics
+```
+
+```{r}
+ols_test_normality(reduced.model)
+ols_plot_resid_qq(reduced.model)
+```
+

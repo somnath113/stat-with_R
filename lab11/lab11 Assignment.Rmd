@@ -1,0 +1,111 @@
+---
+title: "lab11 Assignment"
+author: "Somnath Mukherjee"
+date: "April 21, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#' a function to only install needed but unavailable packages
+#' and loads these packages after installation
+ipak <- function(pkg){
+new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+if (length(new.pkg))
+install.packages(new.pkg, dependencies = TRUE)
+sapply(pkg, require, character.only = TRUE)
+}
+# use function to install and load packages
+packages <- c("ggplot2","MASS","aod","ResourceSelection","lme4","lmerTest","multcomp","gmodels","car","lsmeans","here")
+ipak(packages)
+```
+
+### Read input file
+```{r}
+nested = read.table(here('lab11','data',"data11.txt"), header = TRUE)
+nested$treatment = as.factor(nested$treatment)
+gas = read.table(here('lab11','data',"data11_set2.txt"), header = F)
+colnames(gas)=c("OBS","ADDITIVE","RUN","MPG","CAR")
+gas$ADDITIVE=as.factor(gas$ADDITIVE)
+
+```
+
+## Part I. Answer the following questions for data set of nested design:  
+### Q1.According to the model, do different treatments have significant effect on the apple weight?     
+
+```{r}
+# To fit a nested model
+fit <- lmer(weight ~ treatment +(1|tree/treatment),data=nested)
+```
+
+
+```{r}
+anova(fit)
+```
+  
+Yes, since the p-value is significant (< 0.05), we can conclude that different treatments have significant effect on the apple weight.    
+
+
+### Q2.Using the contrast to test the hypothesis that the difference between treatment 1 and the average of treatment 2 and treatment 3 is equal to zero. What is your conclusion?   
+```{r}
+#post-hoc analysis to be able to do Tukey Contrasts amongst the three different treatments:
+posthoc = glht(fit,linfct = mcp(treatment="Tukey"))
+mcs = summary(posthoc,test=adjusted("single-step"))
+mcs
+```
+
+Since the p-value is greater than 0.05, we fail to reject the null and conclude that the difference between treatment 1 and 2 is not significant different.  
+Since the p-value is less than 0.05, we reject the null and conclude that the difference between treatment 1 & 3 and treatment 2 & 3 is significantly different.    
+
+```{r}
+#Tukey grouping
+cld(mcs,level=0.05,decreasing=TRUE)
+```
+
+From the above tukey grouping result, we can find that treatment 1 and 2 is not significantly different because they are in the same group **b**.  
+The difference between treatment 1 and 3 is significant different because they do not belong in the same group. (treatment 1 is in group **b** and treatment 3 is in group **a**)  
+The difference between treatment 2 and 3 is significant different because they do not belong in the same group. (treatment 2 is in group **b** and treatment 3 is in group **a**)  
+
+
+## Part II. Answer the following questions for data set of random block design:  
+### Q1.Take the variable Car as a random block. Do different additives have significantly different effect on boosting gas mileage?      
+
+
+```{r}
+#create a mixed model
+fit3 <- lmer(MPG ~ ADDITIVE + (1 | CAR)+(1|CAR:ADDITIVE), data = gas)
+summary(fit3)
+```
+
+
+```{r}
+anova(fit3)
+```
+
+Since the p-value is greater that 0.05, we fail to reject null and conclude that different additives do not have significantly different effect on boosting gas mileage.    
+
+### Q2.Take the variable Car as a fixed effect. Do different additives have significantly different effect on boosting gas mileage?      
+   
+
+```{r}
+#create a factorial design
+fit2 = lm(MPG ~ ADDITIVE + CAR + ADDITIVE:CAR, data = gas)
+Anova(fit2)
+```
+
+Yes, since the p-value is less than 0.05, we can conclude that the different additives have significantly different effect on boosting gas mileage.  
+
+### Q3.Are your answers for question 1 and 2 consistent? If not, why (that is, why the test statistic and p-value are different)?  
+No, they are not consistent becuase the formula used to calculate the test-statistics are different and they are fundamentally two different kind of test. Hence, the resultant p-values are different.      
+For the case-1 we have random effect(we are comparing variance, actually we are interested in all car-types for different additives which are the our interest as traetment), whereas for the case-2 we have fixed effect (we are comparing the means for specific car-type A,B,D).    
+
+### Q4. Which model is more appropriate? Why?
+Random effect model is more appropriate. The reason is that we don’t consider the the difference between these specific 4 car-types, rather all car-types for different additives.        
+
+### Q5. What is the additional assumption we must have for the RBD model? Can we test it?  
+The block should be independent. No, we can not test the independence.    

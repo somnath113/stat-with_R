@@ -1,0 +1,181 @@
+---
+title: "lab7 Assignment"
+author: "Somnath Mukherjee"
+date: "March 16, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(rsq)
+library(tidyverse)
+library(MASS)
+```
+
+
+```{r}
+#read input file
+RENTS=read.table(here('lab7','data',"data7.txt"), header = TRUE, sep = "", dec = ".")
+RENTS=RENTS[,-1] # Removes the column with the observation number.
+RENTS[,c(1:4,9)] = lapply(RENTS[,c(1:4,9)], as.numeric) # Makes sure that all numeric variables are seen as such by R
+RENTS[,5:8] = lapply(RENTS[,5:8], as.factor) # Makes sure that all factor variables are seen as such by R
+```
+
+### 1. Run all three of the selection methods discussed above. Report the result of each method.  
+
+First we will fit the full model, so that it will be easy to compare the reduced models later for their merits.  
+  
+```{r}
+#' fit the full model for MLR
+full.model <- lm(rent ~., data = RENTS)
+summary(full.model)
+
+```
+
+As can be seen from the table  above, the model is significant based on the F-statistic p-value.   
+Hence we have a regression effect and at least one of the beta coefficient (partial regression coefficient) is significant.    
+Results with significant variables based on t-test p-values are marked with astericks at different significance level. Not all variables are significant (e.g. ss1,fit1) though.  
+For the full model:
+```{r}
+an1=anova(full.model) # Traditional Analysis of variance
+SS1=an1$`Sum Sq`# List of Sums of Squares Type I
+SS1
+an1
+```
+
+
+**Fitting backward selection model:**
+
+```{r}
+stepback.model <- stepAIC(full.model, direction = "backward",trace = FALSE)
+summary(stepback.model)
+
+```
+
+As can be seen from the table  above, the model is significant based on the F-statistic p-value.   
+Hence we have a regression effect and at least one of the beta coefficient (partial regression coefficient) is significant.    
+Results with significant variables based on t-test p-values are marked with astericks at different significance level.  
+Two variables (ss1 and fit1) got removed from the full model.  
+
+For the backward selection:
+```{r}
+an2=anova(stepback.model) # Traditional Analysis of variance
+SS2=an2$`Sum Sq`# List of Sums of Squares Type I
+SS2
+an2
+```
+
+
+**Fitting forward selection model:**
+
+```{r}
+stepfor.model <- stepAIC(full.model, direction = "forward",trace = FALSE)
+summary(stepfor.model)
+
+```
+
+As can be seen from the table  above, the model is significant based on the F-statistic p-value.   
+Hence we have a regression effect and at least one of the beta coefficient (partial regression coefficient) is significant.    
+Results with significant variables based on t-test p-values are marked with astericks at different significance level.  
+It is same as the full model.  
+For the forward selection:
+```{r}
+an3=anova(stepfor.model) # Traditional Analysis of variance
+SS3=an3$`Sum Sq`# List of Sums of Squares Type I
+SS3
+an3
+```
+
+**Fitting stepwise selection model:**
+
+```{r}
+stepboth.model <- stepAIC(full.model, direction = "both",trace = FALSE)
+summary(stepboth.model)
+
+```
+
+As can be seen from the table  above, the model is significant based on the F-statistic p-value.   
+Hence we have a regression effect and at least one of the beta coefficient (partial regression coefficient) is significant.    
+Results with significant variables based on t-test p-values are marked with astericks at different significance level.  
+Two variables (ss1 and fit1) got removed from the full model.  
+For stepwise:
+```{r}
+an4=anova(stepboth.model) # Traditional Analysis of variance
+SS4=an4$`Sum Sq`# List of Sums of Squares Type I
+SS4
+an4
+```
+
+### 2. Do you get the same reduced model from three methods? Make brief comments.  
+
+We do not have same reduced model from all of the three method. Backward and stepwise selection ends up with same model whereas forward selection yields to full-model.  
+Two variables (ss1 and fit1) got removed from the full model, in case of backward and stepwise selection.  
+Once a variable enters forward selection model, it can not leave the model even though it might become non-significant at later steps.  
+That's why we usually observe a difference in reduced models adopting different selection techniques.      
+
+
+### 3. Which model do you think is the “best” reduced model? Discuss why you choose this model.  
+
+According to me the best model is the reduced model which we arrive from backward(or stepwise) selection.  
+Reasons:  
+1.stepAIC function in R will provide the reduced model based on optimized AIC value.    
+2.For backward selection reduced model, we have better adjusted R-square (0.721) than forward selection (0.712).   
+3.In fact, we have a better adjusted R-square with less number of regressor(or variable) for backward selection.  
+4.The F-statistics P-value for the reduced model is more significant(1.522e-07 < 1.353e-06) in case of backward selection. 
+
+### 4. Use lm to fit the best reduced model. Report the usual results (Hints: hypothesis test results, parameter estimates, validity of assumptions, multicollinearity, outliers, and influential statistics).  
+
+Fitting the reduced model:  
+
+```{r}
+reduced.model <- lm(rent ~  age + sqft + sd + unts + gar + cp,data = RENTS ) # This is the reduced multilinear regression model.
+summary(reduced.model)
+```
+
+As can be seen from the table  above, the model is significant based on the F-statistic p-value: 1.522e-07.   
+Hence we have a regression effect and at least one of the beta coefficient (partial regression coefficient) is significant.    
+Results with significant variables based on t-test p-values are marked with astericks at different significance level.  
+All the parameter estimates are listed above in the table.  
+
+**Test for multicollinearity**  
+```{r}
+ols_coll_diag(reduced.model) # Collinearity diagnostics table
+```
+
+Based on the COndition index value of 43 >30, we still have issue of multicollinearity in the reduced model.  
+
+**outliers, and influential statistics**  
+```{r}
+ols_plot_diagnostics(reduced.model) # A panel of plots for regression diagnostics
+```
+
+```{r}
+influence.measures(reduced.model)
+```
+
+**validity of assumptions: Normality & Homogeneity of variance**  
+
+```{r}
+ols_test_normality(reduced.model)
+ols_plot_resid_qq(reduced.model)
+```
+
+Based on the SW test p-value of 0.12 we can assume normality condition is preserved. 
+
+```{r}
+ols_plot_resid_fit(reduced.model)
+```
+
+Based on the residual plot above, it seems like a somewhat fan out shape and we can not probably assume homogeneity of variance.  

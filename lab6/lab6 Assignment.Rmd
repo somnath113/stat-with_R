@@ -1,0 +1,188 @@
+---
+title: "lab6 Assignment"
+author: "Somnath Mukherjee"
+date: "March 6, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE,echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+###  Lab set-up 
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+#load required packages
+#install.packages('olsrr')
+#install.packages('here')
+#install.packages('car')
+library(car)
+library(olsrr) #package that runs residual plots and check assumptions for normality
+library(here)
+library(rsq)
+library(tidyverse)
+```
+
+
+```{r}
+#read input file
+liver = read.table(here('lab6','data','data6.txt'), header = T, na.strings = ".") #use here() function to specify path
+str(liver)
+```
+   
+   
+   
+###  Question 1: Report the usual results of multiple linear regression (Hints: Hypothesis test results, Parameter estimates, regression function, and the assumptions for homogeneous and normality.)  
+
+```{r}
+#' fit the full model without preprocessing the variables - hence raw vars
+fullRaw.lm <- lm(Y ~ bodyWT+liverWT+dose, data=liver)
+summary(fullRaw.lm)
+
+```
+
+The overall test of hypothesis of MLR is  
+H0: b1 = b2 = b3 = 0  
+and the alternate is  
+H1: at least one of the b is not zero.  
+
+From the result above we have p-value: 0.07197 > 0.05 for the joint test. Hence we fail to reject our null and it seems that there is no regression effect.  
+However, if we look at significance of beta parameters(partial regression coefficients), both 'bodyWT' and 'dose' are significant. 
+Hence, we might have a problem of multicollinearity in our model data.   
+Based on the parameter estimates our regression function becomes:  
+Y_predicted = 0.265 - 0.021bodyWT + 0.014liverWT + 4.178dose  
+
+Now we will check for the assumption of homogeneous and normality.
+```{r}
+ols_test_normality(fullRaw.lm)
+```
+
+Based on the SW test p-value of 0.41, we can assume that normality condition is not violated.  
+
+```{r}
+ols_plot_resid_fit(fullRaw.lm)
+```
+
+Based on the plot above we see some sort of random scatter around zero but due to some fan-in shape homogenity can not be assumed.  
+
+###  Question 2: Is there any multicollinearilty? Why?  
+
+In the question 1 itself we found there is a high possibility of multicollineartiy for our model data. Here we will check in details using statistics.  
+
+```{r}
+ols_coll_diag(fullRaw.lm) # Produces both VIF and Condition Index
+```
+
+The condition index is 213.65 > 30 and we have high VIF values (52 & 51). Hence we have multicollinearity for our model data.    
+
+###  Question 3: Use RSTUDENT and Hat diag to check the outliers. And also use Cook’s D, DFFITS, and DFFBetas to do influence diagnostics.
+
+a)Studentized Residual
+
+```{r}
+StRes=ols_plot_resid_stud(fullRaw.lm) #Studentized Residual analysis - rstudent
+StRes$outlier
+```
+
+
+b) Below will list Hat Diag H, dffits and dfbetas. It also has cook’s d bar and cov.r. These statistics are usually used to detect possible outliers.   
+Astericks beside obs. denotes influential obs.  
+
+```{r}
+# Get ALL INFLUENCE MEASURES DISCUSSED (DFFITS,DFBETAS,COOKSD,HAT diag)
+influence.measures(fullRaw.lm)
+```
+
+Now going by each one of the measures separately:  
+
+c) Cook’s d chart and analysis  
+```{r}
+CkDchart=ols_plot_cooksd_chart(fullRaw.lm) # Chart
+CkDchart$outliers 
+```
+
+
+d) To create the DFBETAs Panel we again ask ols to apply dfbetas analysis on our model as follows:  
+
+```{r}
+Dfb = ols_plot_dfbetas(fullRaw.lm) #dfbetas analysis
+Dfb$outlier
+```
+
+e) To compute the Dffits one should use:  
+
+```{r}
+Dff=ols_plot_dffits(fullRaw.lm) #dffites analysis
+Dff$outlier
+```
+
+
+### Question 4: In the output there are two columns called “95% CL mean” and “95% CL Predicted”. Explain what their difference is.
+
+```{r,warning=FALSE,message=FALSE}
+predict(fullRaw.lm, interval="prediction",level=0.95) #For prediction
+predict(fullRaw.lm, interval = 'confidence',level=0.95) #For mean
+```
+
+“95% CL Predicted” - It will give us prediction of a new observation. It will be more variable than mean CI, with a higher/thicker confidence band around regression line/point estimate.  
+“95% CL mean” - It will give us estimation on mean response. It will be less variable than predicted value, with a lower/thinner confidence band around regression line/point estimate.      
+
+
+### Question 5: What is the partial R2 type II for the variable DOSE. Can it be used to evaluate the importance of DOSE?  
+
+```{r}
+#' The @rsq.partial function is from the rsq pacakge
+#' it takes the model object as its argument
+#' it produces the partial R-Square type II
+rsq.partial(fullRaw.lm)
+```
+For 'dose' the value is 0.3342. Yes, it can be used to evaluate the importance of 'dose' but a better statistics would be the p-value.  
+
+### Question 6: Carefully exam the values of standardized regression coefficients and partial R2 type II for individual independent variables, do you see the similar trends that you see in t-values in the t-test of regression coefficient? Make brief comments.  
+
+Standardize using Scale.  
+```{r}
+liver_noNA <- na.omit(liver) # remove any NA rows
+#' apply the @scale function to all columns in the @liver_noNA
+#' dataset by using the @lapply function
+#'
+#' the lapply function produces a list of the variables
+#' convert list to data frame by using the @as.data.frame function
+#' Store transformerd dataset as liver_trans
+liver_trans <- as.data.frame(lapply(liver_noNA, scale))
+```
+
+a) Standardized Regression Coefficients:  
+
+```{r}
+# Fit the model with standardized coefficients
+fullTrans.lm <- lm(Y ~ bodyWT+liverWT+dose, data=liver_trans)
+summary(fullTrans.lm)
+```
+
+From the standardized Regression Coefficients above we can see the most important variable is dose with the highest value and the least important is the liverWT.  
+
+b) Partial R-Square type II:  
+
+```{r}
+#' The @rsq.partial function is from the rsq pacakge
+#' it takes the model object as its argument
+#' it produces the partial R-Square type II
+rsq.partial(fullRaw.lm)
+```
+
+From the partial R-Square type II above we can see the most important variable is dose with the highest value and the least important is the liverWT.  
+
+c) t-values in the t-test of regression coefficient:  
+
+```{r}
+#' fit the full model without preprocessing the variables - hence raw vars
+summary(fullRaw.lm)
+
+```
+
+From the p-value of t-statistics above we can see the most important variable is dose with the most significant value and the least important is the liverWT with no significance.  
+
+
+Finally, we can conclude as far as the importance of the variable is concerned, all three different statistical measures agree with each other.    
+
